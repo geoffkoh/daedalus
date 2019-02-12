@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.6"
+
+# Command to install:
+install:
+  - pip install -r requirements.txt
+
+# Command to run test
+script:
+  - python setup.py test

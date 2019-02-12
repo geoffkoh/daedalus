@@ -11,14 +11,14 @@
 import sys
 
 from pkg_resources import require, VersionConflict
-from setuptools import setup
+from setuptools import setup, find_packages
 
 try:
-    require('setuptools>=38.3')
+    require('setuptools>=38.2.4')
 except VersionConflict:
-    print("Error: version of setuptools is too old (<38.3)!")
+    print("Error: version of setuptools is too old (<38.2.4)!")
     sys.exit(1)
 
 
 if __name__ == "__main__":
-    setup(use_pyscaffold=True)
+    setup(packages=find_packages(exclude=['tests', 'docs', 'dist', 'build']))
