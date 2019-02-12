@@ -14,7 +14,7 @@
 # Example:
 # numpy==1.13.3
 # scipy==1.0
-setuptools==38.3
+setuptools==38.2.4
 argcomplete==1.9.4
 colorama==0.4.1
 eventlet==0.24.1
@@ -26,4 +26,5 @@ pathlib2==2.3.3
 pudb==2018.1
 Sphinx==1.8.4
 pytest-cov==2.6.1
+pytest-runner==4.2
 
