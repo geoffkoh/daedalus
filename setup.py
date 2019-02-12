@@ -14,9 +14,9 @@ from pkg_resources import require, VersionConflict
 from setuptools import setup, find_packages
 
 try:
-    require('setuptools>=38.3')
+    require('setuptools>=38.2.4')
 except VersionConflict:
-    print("Error: version of setuptools is too old (<38.3)!")
+    print("Error: version of setuptools is too old (<38.2.4)!")
     sys.exit(1)
 
 
