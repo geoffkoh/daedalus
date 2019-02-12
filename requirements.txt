@@ -17,7 +17,6 @@
 setuptools==40.7.3
 argcomplete==1.9.4
 colorama==0.4.1
-PyContracts==1.8.12
 eventlet==0.24.1
 funcsigs==1.0.2
 gevent==1.4.0
@@ -26,7 +25,5 @@ numpy==1.16.1
 pathlib2==2.3.3
 pudb==2018.1
 Sphinx==1.8.4
-Twisted==18.9.0
-zope==4.0b9
 pytest-cov==2.6.1
 
