@@ -16,7 +16,6 @@ import io
 import unittest
 from unittest import mock
 import psutil
-import pytest
 
 # Application imports
 import daedalus.process.daemon as daemon
@@ -25,8 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class TestDaemon(unittest.TestCase):
+    """ Test class for the daemon. """
 
     def test_create(self):
+        """ Tests the create function. """
 
         my_daemon = daemon.Daemon()
         assert my_daemon is not None, 'The daemon should be created'
@@ -176,7 +177,7 @@ class TestDaemonMethods(unittest.TestCase):
         # Case 1: Just checking to see if the proper error is raised
         invalid_root = 'does_not_exist'
         try:
-            daemon._change_root_directory(invalid_root)
+            daemon.change_root_directory(invalid_root)
             assert False, 'Should not reach this part'
         except daemon.DaemonError as exc:
             assert isinstance(exc, daemon.DaemonError)
@@ -206,7 +207,7 @@ class TestDaemonMethods(unittest.TestCase):
         original_string = 'hello world'
 
         # Case 1: Redirects source stream to target stream
-        daemon._redirect_stream(source_stream, target_stream)
+        daemon.redirect_stream(source_stream, target_stream)
 
         # Tests by writing something to source stream
         source_stream.write(original_string)
@@ -218,7 +219,7 @@ class TestDaemonMethods(unittest.TestCase):
             assert contents == original_string, 'The stream would be redirected'
 
         # Case 2: Redirect to /dev/null
-        daemon._redirect_stream(source_stream, None)
+        daemon.redirect_stream(source_stream, None)
 
         # Writes some more to the source string
         source_stream.write(original_string)
@@ -236,19 +237,19 @@ class TestDaemonMethods(unittest.TestCase):
 
         # Tests getting from non int and no fileno
         io_stream = io.StringIO()
-        descriptor = daemon._get_file_descriptor(io_stream)
+        descriptor = daemon.get_file_descriptor(io_stream)
         assert descriptor is None, 'Should return a None for obj with no fileno()'
-        descriptor = daemon._get_file_descriptor('invalid')
+        descriptor = daemon.get_file_descriptor('invalid')
         assert descriptor is None, 'Should return a None for string'
 
         # Tests getting a fileno from a normal file object
         temp_file = tempfile.NamedTemporaryFile('w')
-        descriptor = daemon._get_file_descriptor(temp_file)
+        descriptor = daemon.get_file_descriptor(temp_file)
         assert isinstance(descriptor, int), 'The obj should have an int file descriptor.'
 
         # Tests on passing in an integer
         input_descriptor = 1
-        descriptor = daemon._get_file_descriptor(input_descriptor)
+        descriptor = daemon.get_file_descriptor(input_descriptor)
         assert descriptor == input_descriptor, 'The descriptor should be the same'
 
     # end test_get_file_descriptor()
@@ -264,12 +265,12 @@ class TestDaemonMethods(unittest.TestCase):
         assert not temp_file.closed, 'The temp file should be open'
 
         # Attempts to close it except for sys streams
-        exclude_list = [daemon._get_file_descriptor(stream)
+        exclude_list = [daemon.get_file_descriptor(stream)
                         for stream in [sys.stdin,
                                        sys.stdout,
                                        sys.stderr,
                                        temp_file_exclude]]
-        daemon._close_all_open_files(exclude_descriptor_list=exclude_list)
+        daemon.close_all_open_files(exclude_descriptor_list=exclude_list)
 
         try:
             temp_file.close()
@@ -296,16 +297,16 @@ class TestDaemonMethods(unittest.TestCase):
 
         # Sets the umask to 0o027
         original_umask = get_curr_umask()
-        daemon._change_file_creation(0o027)
+        daemon.change_file_creation(0o027)
         new_umask = get_curr_umask()
         assert new_umask == 0o027, 'The umask should be changed'
 
         # Change back
-        daemon._change_file_creation(original_umask)
+        daemon.change_file_creation(original_umask)
 
         # Tests invalid umask
         try:
-            daemon._change_file_creation('invalid')
+            daemon.change_file_creation('invalid')
             assert False, 'Should not reach this line'
         except daemon.DaemonError:
             assert True, 'The exception is caught'
@@ -320,7 +321,7 @@ class TestDaemonMethods(unittest.TestCase):
         # Gets the current working directory
         original_dir = os.getcwd()
         temp_dir = tempfile.TemporaryDirectory()
-        daemon._change_working_directory(temp_dir.name)
+        daemon.change_working_directory(temp_dir.name)
         assert os.path.realpath(os.getcwd()) == os.path.realpath(temp_dir.name), \
             'The working directory should be changed.'
 
@@ -333,7 +334,7 @@ class TestDaemonMethods(unittest.TestCase):
         # Case 2: Invalid path
         try:
             invalid_path = '/does/not/exist'
-            daemon._change_working_directory(invalid_path)
+            daemon.change_working_directory(invalid_path)
             assert False, 'Should not reach this line'
         except daemon.DaemonError:
             assert True, 'The exception is caught'
@@ -347,14 +348,14 @@ class TestDaemonMethods(unittest.TestCase):
         try:
             uid = os.getuid()
             gid = os.getgid()
-            daemon._change_process_owner(uid, gid)
+            daemon.change_process_owner(uid, gid)
             assert True, 'Changing process owners without errors'
         except daemon.DaemonError:
             assert False, 'Should not reach this line'
 
         # Case 2: Invalid uid and gid
         try:
-            daemon._change_process_owner(-999, -999)
+            daemon.change_process_owner(-999, -999)
             assert False, 'Should not reach this line'
         except daemon.DaemonError:
             assert True, 'The exception should be caught'
@@ -365,7 +366,7 @@ class TestDaemonMethods(unittest.TestCase):
         """ Test the option to prevent core dump """
 
         # Call prevent core dump
-        daemon._prevent_core_dump()
+        daemon.prevent_core_dump()
 
         # Checks to make sure the limit is 0
         core_resource = resource.RLIMIT_CORE
@@ -377,7 +378,7 @@ class TestDaemonMethods(unittest.TestCase):
         with mock.patch('resource.getrlimit') as mock_getrlimit:
             mock_getrlimit.side_effect = ValueError
             try:
-                daemon._prevent_core_dump()
+                daemon.prevent_core_dump()
                 assert False, 'Should not reach this line'
             except ValueError:
                 assert True, 'The exception should be caught'
@@ -396,5 +397,44 @@ class TestDaemonMethods(unittest.TestCase):
             assert daemon.is_started_by_init(), 'The process should be started by init'
 
     # end test_is_started_by_init()
+
+    def test_convert_fileobj(self):
+        """ Tests the function convert_fileobj() """
+
+        # Case 1: Tests for None and /dev/null
+        devnull_file = daemon.convert_fileobj('/dev/null')
+        none_file = daemon.convert_fileobj(None)
+
+        assert none_file == devnull_file, 'Should have the same /dev/null object'
+        assert none_file is None, 'The return value should be None'
+
+        # Case 2: Tests for normal stream
+        stdout_file = daemon.convert_fileobj(sys.stdout)
+        assert stdout_file == sys.stdout, 'The original object should pass through.'
+
+        # Case 3: Pass in a filename
+        temp_dir = tempfile.TemporaryDirectory()
+        temp_file = os.path.join(temp_dir.name, 'temp.txt')
+        file = daemon.convert_fileobj(temp_file, 'w')
+        file.write('hello world')
+        file.close()
+
+        # Tries reading it again
+        with open(temp_file, 'r') as input_file:
+            contents = input_file.read()
+            assert contents == 'hello world'
+
+        # Case 4: Invalid input
+        try:
+            daemon.convert_fileobj('/path/does/not/exist')
+            assert False, 'Should not reach here'
+        except daemon.DaemonError:
+            assert True, 'Exception is caught.'
+
+        # Case 5: Taking in an int
+        file = daemon.convert_fileobj(1)
+        assert file is None, 'The return file should be a None'
+
+    # end test_convert_fileobj()
 
 # end class TestDaemonMethods

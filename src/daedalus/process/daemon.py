@@ -14,11 +14,10 @@ import pwd
 import resource
 import signal
 import sys
+from functools import lru_cache
 
 # Third party imports
 import psutil
-
-# Application imports
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -31,7 +30,7 @@ class DaemonError(Exception):
 class Daemon:  # pylint: disable=R0902
     """ Class that implements a Daemon process.
 
-    According to the PEP-3143 standards, a daemon should perform the following steps
+    As per the PEP-3143 standards, a daemon should perform the following steps
 
     * Close all open file descriptors
     * Change current working directory
@@ -51,9 +50,9 @@ class Daemon:  # pylint: disable=R0902
     Args:
         pid_filename (str): The filename for the pid file. If None is given,
             then the daemon does not create a lockfile.
-        stdin (file object): The input stream.
-        stdout (file object): The output stream.
-        stderr (file object): The error stream.
+        stdin (file object or str): The input stream or a filename.
+        stdout (file object or str): The output stream or a filename.
+        stderr (file object or str): The error stream or a filename.
         exclude_list (list): List of file descriptors or file objects that should not be closed.
         workdir (str) : The working directory of the daemon.
         rootdir (str) : The root directory of the process
@@ -127,19 +126,19 @@ class Daemon:  # pylint: disable=R0902
 
         # Changes the current working and root directory
         if self._rootdir:
-            _change_root_directory(self._rootdir)
+            change_root_directory(self._rootdir)
         if self._workdir:
-            _change_working_directory(self._workdir)
+            change_working_directory(self._workdir)
 
         # Reset file creation mask
-        _change_file_creation(self._umask)
+        change_file_creation(self._umask)
 
         # Changes the process owner
-        _change_process_owner(self._uid, self._gid, self._initgroups)
+        change_process_owner(self._uid, self._gid, self._initgroups)
 
         # Checks if core dump is to be created
         if self.prevent_core:
-            _prevent_core_dump()
+            prevent_core_dump()
 
         # Detaches from the parent process if it is required
         # and if this process is not started by init
@@ -152,7 +151,7 @@ class Daemon:  # pylint: disable=R0902
 
         # Close all open files
         logger.debug('Closing file descriptors except %s', exclude_descriptor_list)
-        _close_all_open_files(exclude_descriptor_list)
+        close_all_open_files(exclude_descriptor_list)
 
         # Generates the lock file.
         # logger.debug('Generating lockfile')
@@ -165,9 +164,12 @@ class Daemon:  # pylint: disable=R0902
             sys.exit(1)
 
         # Redirects the default stream
-        _redirect_stream(sys.stdin, self._stdin)
-        _redirect_stream(sys.stdout, self._stdout)
-        _redirect_stream(sys.stderr, self._stderr)
+        stdin = convert_fileobj(self._stdin, 'r')
+        stdout = convert_fileobj(self._stdout, 'a+')
+        stderr = convert_fileobj(self._stderr, 'a+')
+        redirect_stream(sys.stdin, stdin)
+        redirect_stream(sys.stdout, stdout)
+        redirect_stream(sys.stderr, stderr)
 
         # Registers the terminate signal and close event
         # the rest ignore.
@@ -206,7 +208,7 @@ class Daemon:  # pylint: disable=R0902
         for item in exclude_list:
             if item is None:
                 continue
-            descriptor = _get_file_descriptor(item)
+            descriptor = get_file_descriptor(item)
             if descriptor is not None:
                 exclude_descriptor_list.add(descriptor)
 
@@ -275,7 +277,49 @@ def generate_lockfile(filename):
 # end generate_lock()
 
 
-def _get_file_descriptor(obj):
+@lru_cache(maxsize=32)
+def convert_fileobj(obj, mode='r'):
+    """ Takes in an object and opens it, returning the descriptor.
+
+    This method is used to guess and create the file object and then
+    returns its file descriptor.
+
+    If the object is a string, then it assumes it is a file and attempts
+    to open it, given the mode.
+
+    If the object is '/dev/null', then it creates a devnull stream.
+
+    If the object has a fileno() function associated with it, then
+    it just calls the fileno object.
+
+    Args:
+        obj (str or file object): Either a filename or a file object.
+        mode (str): The mode for opening the file.
+
+    Returns:
+        A file object.
+
+    Raises:
+        If we are unable to convert the object into any recognizable
+        file object, raise a ``DaemonError`` exception.
+    """
+
+    try:
+        if obj is None or obj == '/dev/null':
+            return None
+        elif isinstance(obj, str):
+            return open(obj, mode)
+        elif hasattr(obj, 'fileno'):
+            return obj
+        else:
+            return None
+    except FileNotFoundError:
+        raise DaemonError(f'Unable to open {str(obj)}.')
+
+# end convert_fileobj()
+
+
+def get_file_descriptor(obj):
     """ From the object, gets the file descriptor.
 
     The file descriptor is an int object. For the input ``obj``, if it is an
@@ -302,7 +346,7 @@ def _get_file_descriptor(obj):
 
     return file_descriptor
 
-# end _get_file_descriptor()
+# end get_file_descriptor()
 
 
 def detach():  # pragma: no cover
@@ -350,13 +394,12 @@ def terminate(signal_number, stack):
 
     logger.debug(stack)
     exception = SystemExit(f'Terminating on signal {signal_number}')
-    # raise exception
-    sys.exit(0)
+    raise exception
 
 # end terminate()
 
 
-def _redirect_stream(source_stream, target_stream):
+def redirect_stream(source_stream, target_stream):
     """ Redirect a stream to a specified target stream.
 
     Redirects a stream from source to target. The source is typically
@@ -373,10 +416,10 @@ def _redirect_stream(source_stream, target_stream):
         else os.open(os.devnull, os.O_RDWR)
     os.dup2(target_fd, source_stream.fileno())
 
-# end _redirect_stream()
+# end redirect_stream()
 
 
-def _close_all_open_files(exclude_descriptor_list=None):
+def close_all_open_files(exclude_descriptor_list=None):
     """ Closes all open files.
 
     This method gets all open files from the current process and calls them.
@@ -405,7 +448,7 @@ def _close_all_open_files(exclude_descriptor_list=None):
 # end close_all_open_files()
 
 
-def _change_file_creation(umask):
+def change_file_creation(umask):
     """ Changes the file creation mask.
 
     Args:
@@ -427,7 +470,7 @@ def _change_file_creation(umask):
 # end change_file_creation()
 
 
-def _change_root_directory(path):  # pragma: no cover
+def change_root_directory(path):  # pragma: no cover
     """ Changes the root directory.
 
     This operation should only be run if one is running the code
@@ -449,10 +492,10 @@ def _change_root_directory(path):  # pragma: no cover
         logger.error(message)
         raise DaemonError(message)
 
-# end _change_root_directory()
+# end change_root_directory()
 
 
-def _change_working_directory(workdir):
+def change_working_directory(workdir):
     """ Changes the current working directory.
 
     Args:
@@ -474,7 +517,7 @@ def _change_working_directory(workdir):
 # end change_working_directory()
 
 
-def _change_process_owner(uid, gid, initgroups=False):
+def change_process_owner(uid, gid, initgroups=False):
     """ Changes the owning uid, gid and groups of this process.
 
     This method ensures that the daemon being created has the same uid and gid as the
@@ -508,10 +551,10 @@ def _change_process_owner(uid, gid, initgroups=False):
         logger.error(message)
         raise DaemonError(message)
 
-# end _change_process_owner()
+# end change_process_owner()
 
 
-def _prevent_core_dump():
+def prevent_core_dump():
     """ Prevents process from generating a core dump
 
     This method checks if the current environment supports core dump.
@@ -535,7 +578,7 @@ def _prevent_core_dump():
     core_limit = (0, 0)
     resource.setrlimit(core_resource, core_limit)
 
-# end _prevent_core_dump()
+# end prevent_core_dump()
 
 
 def is_started_by_init():
