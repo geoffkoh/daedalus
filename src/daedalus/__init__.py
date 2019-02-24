@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: skip-file
 from pkg_resources import get_distribution, DistributionNotFound
 
 try:
