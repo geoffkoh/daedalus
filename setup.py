@@ -21,4 +21,4 @@ except VersionConflict:
 
 
 if __name__ == "__main__":
-    setup(packages=find_packages(exclude=['tests', 'docs', 'dist', 'build']))
+    setup(packages=find_packages(exclude=['tests', 'docs', 'dist', 'build', 'deprecate']))
