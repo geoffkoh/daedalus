@@ -83,6 +83,7 @@ Passing Parameters
 import copy
 import inspect
 import logging
+import multiprocessing as mp
 
 # Third part imports
 
@@ -140,8 +141,25 @@ class Workflow(metaclass=WorkflowMeta):
         """ Constructor """
 
         self._name = name
+        self._context = dict()  # Context for holding data across tasks
+
+        # Dictionary maintaining the current status
+        self._task_instance_map = dict()
+        self._running = dict()
+        self._succeed = dict()
+        self._fail = dict()
+
+        self._queue = mp.Queue()
 
     # end __init__()
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def context(self):
+        return self._context
 
     @classmethod
     def task(cls, task_id):
@@ -206,7 +224,7 @@ class Workflow(metaclass=WorkflowMeta):
 
         Args:
             task_id (str): The name of the task.
-            task (``Task`` or callable): The class or an instance of the task
+            task (``Task``): The class or an instance of the task
 
         """
 
@@ -214,20 +232,37 @@ class Workflow(metaclass=WorkflowMeta):
 
     # end add_task
 
-    def start(self):
-        """ Starts running the workflow """
+    def start(self, state=None):
+        """ Starts running the workflow
+
+        This is the main workflow that runs the workflow. It's engine can be configured to be either running
+        on the actual main thread (default), or a ThreadPool, or a ProcessPool.
+
+        The algorithm works by maintaining a dynamically updated working queue.
+
+        The pseudo-code works as such:
+
+        while not completed:
+            fireable_task = self.get_fireable_task
+            for each task in fireable_task
+                executor.submit(....)
+            # Do I need to sleep?
+
+        Args:
+            state (?): Object representing the state of the workflow so that we can \
+                resume running from where we left off.
+        """
 
         for name, task in self.task_map.items():
-            logger.info('Running %s', name)
+            logger.info('Instantiating %s', name)
             if inspect.isclass(task):
                 curr_task = task()
             else:
                 curr_task = copy.deepcopy(task)
+            self._task_instance_map[name] = curr_task
 
-            # Runs curr task
-            curr_task.run()
+        # Gets the list of fireable tasks
 
-        # Runs the task
 
     # end start()
 
@@ -242,7 +277,7 @@ class Workflow(metaclass=WorkflowMeta):
         """
 
         (object_id, attr) = obj.parse()
-        if object_id == 'global':  # This is a reserved id
+        if object_id == 'context':  # This is a reserved id
             return self.context[attr]
         else:
             task = self.task_map.get(object_id, None)

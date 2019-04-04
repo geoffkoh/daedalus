@@ -25,11 +25,15 @@ class TestWorkflow(unittest.TestCase):
         """ Tests the adding of tasks via decorator """
 
         # Define a custom workflow
+        # The reason we have two workflows here is to make sure
+        # that the definition of one does not affect the other
         class MyWorkflow(workflow.Workflow):
             pass
 
         class MyWorkflow2(workflow.Workflow):
             pass
+
+        # Tasks for workflow 1
 
         @MyWorkflow.task('task1')
         def task1():
@@ -38,6 +42,8 @@ class TestWorkflow(unittest.TestCase):
         @MyWorkflow.task('task2')
         def task2():
             print('In Task 2')
+
+        # Tasks for workflow 2
 
         @MyWorkflow2.task('task3')
         def task3():
@@ -136,6 +142,14 @@ class TestWorkflow(unittest.TestCase):
                                                 'val2': 'parent2.return_value'},
                                           depends_on=['parent1', 'parent2'],
                                           name='place1')
+
+    # end test_dependency()
+
+    def test_start_default(self):
+        """ Tests the start algorithm with thread executor """
+
+    # end test_start_default
+
 
 # end class TestTask
 
