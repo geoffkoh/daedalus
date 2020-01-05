@@ -28,4 +28,5 @@ Sphinx==1.8.4
 pytest-cov==2.6.1
 pytest-runner==4.2
 psutil==5.5.0
+pandas
 
