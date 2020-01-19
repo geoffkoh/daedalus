@@ -266,11 +266,86 @@ class PropMap:
                     self._data.at[index, key] = value
 
         # Drops the combinations that does not have values
-        self._data.dropna()
+        self._data = self._data.dropna()
 
         return True
 
     # end generate()
+
+    def generate2(self) -> bool:
+        """ Second iteration of the generate function """
+
+        # If the domain and range are None, we try to build
+        # using the existing rules
+
+        if self._domain is None and self._range is None:
+            self._collect()
+
+        # Prepares the column headers
+        columns = self._get_columns()
+
+        # Creates an empty dataframe
+        df = pd.DataFrame(columns=columns, dtype=object)
+
+        # For each rule, expand the combination based on the 
+        # rule prop. For dimensions that are missing
+        # we use the wild card NaN to represent
+        for rule in self._rules:
+            
+            property_map = rule.get('prop', {})
+            value_map = rule.get('value', {})
+            name = rule.get('name', None)
+
+            # Create the dataframe based on the combinations in the 
+            # property map
+            initial_df = self.create_initial_dataframe(property_map)
+            for index, row in initial_df.iterrows():
+                for key, value in value_map.items():
+                    initial_df.at[index, key] = value
+
+            # Append to the dataframe
+            logger.info(f'Initial df {initial_df}')
+            df = df.append(initial_df)
+
+
+        # Sets the self dataframe
+        df.reset_index(inplace=True, drop=True)
+        self._data = df
+        return True
+
+    # end generate2()
+
+    def create_initial_dataframe(self, property_map: dict) -> pd.DataFrame:
+        """ Creates an initial dataframe based on the values in property map. 
+
+        Args:
+            property_map (dict): A dictionary of property and the values they take.
+
+        Returns:
+            Returns a DataFrame with the columns that represent the properties and 
+            the combination of the values that is specified by the rule.
+        """
+
+        data = []
+        temp_property_map = copy.deepcopy(property_map)
+        for key in self._domain.keys():
+            if key not in property_map:
+                temp_property_map[key] = [np.NaN,]
+            else:
+                value = temp_property_map[key]
+                if not isinstance(value, list):
+                    temp_property_map[key] = [value,]
+        
+        keys = temp_property_map.keys()
+        for entry in itertools.product(*temp_property_map.values()):
+            combination = dict(zip(keys, list(entry)))
+            data.append(combination)
+
+        columns = self._get_columns()
+        initial_df = pd.DataFrame(data, columns=columns, dtype=object)
+        return initial_df
+
+    # end create_initial_data()
 
     @staticmethod
     def _conflict_policy_override(data, index, value_map, name):

@@ -17,7 +17,40 @@ logger = logging.getLogger(__name__)
 class TestPropMap(unittest.TestCase):
     """ Test class for PropMap """
 
-    def test_create(self):
+
+    def test_create_project(self):
+
+        settings = {
+            'rules': [
+                {
+                    'prop': {'class': 'general'},
+                    'value': {'slots': 6}
+                },
+                {
+                    'prop': {'class': 'cr'},
+                    'value': {'slots': 12}
+                },
+                {
+                    'prop': {'class': 'general', 'project': 'deepresearch'},
+                    'value': {'slots': 10}
+                },
+                {
+                    'prop': {'class': 'pm'},
+                    'value': {'slots': 20}
+                },
+
+            ],
+            
+        }
+
+        prop = PropMap(settings=settings)
+        prop.generate2()
+        print('')
+        print(prop._data)
+
+    # end test_create_project()
+
+    def _create(self):
         """ Basic tests involving property map """
 
         settings = {
@@ -68,7 +101,7 @@ class TestPropMap(unittest.TestCase):
 
     # end test_create()
 
-    def test_sample_scale_factor(self):
+    def _sample_scale_factor(self):
         """ This test case tests with the submitquota scale factor as sample data """
 
         # Define the rules
