@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 class DaemonError(Exception):
     """ Generic class for any Daemon related errors """
+
+
 # end class DaemonError
 
 
@@ -64,20 +66,22 @@ class Daemon:  # pylint: disable=R0902
         prevent_core (bool) : If true, prevents the generation of core files.
     """
 
-    def __init__(self,  # pylint: disable=R0913
-                 pid_filename=None,
-                 stdin=None,
-                 stdout=None,
-                 stderr=None,
-                 exclude_list=None,
-                 workdir='/',
-                 rootdir=None,
-                 umask=0o027,  # Default mask level
-                 uid=None,
-                 gid=None,
-                 initgroups=False,
-                 prevent_core=True,
-                 detach_process=True):
+    def __init__(
+        self,  # pylint: disable=R0913
+        pid_filename=None,
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        exclude_list=None,
+        workdir="/",
+        rootdir=None,
+        umask=0o027,  # Default mask level
+        uid=None,
+        gid=None,
+        initgroups=False,
+        prevent_core=True,
+        detach_process=True,
+    ):
         """ Constructor """
 
         self._pid_filename = os.path.abspath(pid_filename) if pid_filename else None
@@ -103,18 +107,21 @@ class Daemon:  # pylint: disable=R0902
     def is_daemon(self):  # pragma: no cover
         """ Property for _is_daemon. """
         return self._is_daemon
+
     # end is_daemon()
 
     @property
     def prevent_core(self):  # pragma: no cover
         """ Property for _prevent_core. """
         return self._prevent_core
+
     # end prevent_core()
 
     @property
     def detach_process(self):  # pragma: no cover
         """ Property for _detach_process. """
         return self._detach_process
+
     # end detach_process()
 
     def start(self):  # pragma: no cover
@@ -143,14 +150,14 @@ class Daemon:  # pylint: disable=R0902
         # Detaches from the parent process if it is required
         # and if this process is not started by init
         if self.detach_process and not is_started_by_init():
-            logger.debug('Detaching process')
+            logger.debug("Detaching process")
             detach()
 
         # Creates the exclude list for file handler closing
         exclude_descriptor_list = self._generate_exclude_file_descriptors()
 
         # Close all open files
-        logger.debug('Closing file descriptors except %s', exclude_descriptor_list)
+        logger.debug("Closing file descriptors except %s", exclude_descriptor_list)
         close_all_open_files(exclude_descriptor_list)
 
         # Generates the lock file.
@@ -158,15 +165,15 @@ class Daemon:  # pylint: disable=R0902
         lockfile = generate_lockfile(self._pid_filename)
         try:
             if lockfile:
-                lockfile.write(f'{os.getpid()}')
+                lockfile.write(f"{os.getpid()}")
                 lockfile.flush()
         except IOError:
             sys.exit(1)
 
         # Redirects the default stream
-        stdin = convert_fileobj(self._stdin, 'r')
-        stdout = convert_fileobj(self._stdout, 'a+')
-        stderr = convert_fileobj(self._stderr, 'a+')
+        stdin = convert_fileobj(self._stdin, "r")
+        stdout = convert_fileobj(self._stdout, "a+")
+        stderr = convert_fileobj(self._stderr, "a+")
         redirect_stream(sys.stdin, stdin)
         redirect_stream(sys.stdout, stdout)
         redirect_stream(sys.stderr, stderr)
@@ -178,7 +185,7 @@ class Daemon:  # pylint: disable=R0902
 
         # Sets the is_daemon flag to true
         self._is_daemon = True
-        logger.debug('Daemon started %s', os.getpid())
+        logger.debug("Daemon started %s", os.getpid())
 
     # end start()
 
@@ -228,6 +235,7 @@ class Daemon:  # pylint: disable=R0902
 
     # end _close()
 
+
 # end class Daemon
 
 
@@ -249,14 +257,14 @@ def generate_lockfile(filename):
     # that is running
     contents = None
     if os.path.isfile(filename):
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             contents = file.read()
 
     # Creates a lockfile so that only one instance of this daemon is running
     try:
-        lockfile = open(filename, 'w')
+        lockfile = open(filename, "w")
     except IOError:
-        logger.error('Unable to create file %s for generating lock', filename)
+        logger.error("Unable to create file %s for generating lock", filename)
         sys.exit(1)
 
     # Tries to get a lock on the pid file. If fail
@@ -265,20 +273,21 @@ def generate_lockfile(filename):
     try:
         fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError:
-        logger.error('Unable to lock on %s', filename)
+        logger.error("Unable to lock on %s", filename)
         if contents:  # pragma: no cover
-            with open(filename, 'w') as file:
+            with open(filename, "w") as file:
                 file.write(contents)
         sys.exit(1)
 
     # Returns the lockfile
     return lockfile
 
+
 # end generate_lock()
 
 
 @lru_cache(maxsize=32)
-def convert_fileobj(obj, mode='r'):
+def convert_fileobj(obj, mode="r"):
     """ Takes in an object and opens it, returning the descriptor.
 
     This method is used to guess and create the file object and then
@@ -305,16 +314,17 @@ def convert_fileobj(obj, mode='r'):
     """
 
     try:
-        if obj is None or obj == '/dev/null':
+        if obj is None or obj == "/dev/null":
             return None
         elif isinstance(obj, str):
             return open(obj, mode)
-        elif hasattr(obj, 'fileno'):
+        elif hasattr(obj, "fileno"):
             return obj
         else:
             return None
     except FileNotFoundError:
-        raise DaemonError(f'Unable to open {str(obj)}.')
+        raise DaemonError(f"Unable to open {str(obj)}.")
+
 
 # end convert_fileobj()
 
@@ -336,7 +346,7 @@ def get_file_descriptor(obj):
     """
 
     file_descriptor = None
-    if hasattr(obj, 'fileno'):
+    if hasattr(obj, "fileno"):
         try:
             file_descriptor = obj.fileno()
         except ValueError:
@@ -345,6 +355,7 @@ def get_file_descriptor(obj):
         file_descriptor = obj
 
     return file_descriptor
+
 
 # end get_file_descriptor()
 
@@ -372,11 +383,12 @@ def detach():  # pragma: no cover
                 os._exit(0)  # pylint: disable=W0212
         except OSError:
             # Re-raise the error with more error messages
-            raise OSError(f'{message}')
+            raise OSError(f"{message}")
 
-    detach_and_exit_parent('Error in first fork')
+    detach_and_exit_parent("Error in first fork")
     os.setsid()
-    detach_and_exit_parent('Error in second fork')
+    detach_and_exit_parent("Error in second fork")
+
 
 # end detach()
 
@@ -393,8 +405,9 @@ def terminate(signal_number, stack):
     """
 
     logger.debug(stack)
-    exception = SystemExit(f'Terminating on signal {signal_number}')
+    exception = SystemExit(f"Terminating on signal {signal_number}")
     raise exception
+
 
 # end terminate()
 
@@ -412,9 +425,11 @@ def redirect_stream(source_stream, target_stream):
         target_stream (file obj): The target stream. Must implement ``fileno()``.
     """
 
-    target_fd = target_stream.fileno() if target_stream \
-        else os.open(os.devnull, os.O_RDWR)
+    target_fd = (
+        target_stream.fileno() if target_stream else os.open(os.devnull, os.O_RDWR)
+    )
     os.dup2(target_fd, source_stream.fileno())
+
 
 # end redirect_stream()
 
@@ -445,6 +460,7 @@ def close_all_open_files(exclude_descriptor_list=None):
             except OSError:  # pragma: no cover
                 pass
 
+
 # end close_all_open_files()
 
 
@@ -460,12 +476,13 @@ def change_file_creation(umask):
     """
 
     try:
-        logger.debug('Changing file creation mask %s', umask)
+        logger.debug("Changing file creation mask %s", umask)
         os.umask(umask)
     except Exception as exc:
-        message = f'Unable to change file creation mask ({exc})'
+        message = f"Unable to change file creation mask ({exc})"
         logger.error(message)
         raise DaemonError(message)
+
 
 # end change_file_creation()
 
@@ -485,12 +502,13 @@ def change_root_directory(path):  # pragma: no cover
     """
 
     try:
-        logger.debug('Changing root directory to %s', path)
+        logger.debug("Changing root directory to %s", path)
         os.chroot(path)
     except Exception as exc:
-        message = f'Unable to change root directory to {path} ({exc})'
+        message = f"Unable to change root directory to {path} ({exc})"
         logger.error(message)
         raise DaemonError(message)
+
 
 # end change_root_directory()
 
@@ -507,12 +525,13 @@ def change_working_directory(workdir):
     """
 
     try:
-        logger.debug('Changing working directory to %s', workdir)
+        logger.debug("Changing working directory to %s", workdir)
         os.chdir(workdir)
     except Exception as exc:
-        message = f'Unable to change working directory to {workdir} ({exc})'
+        message = f"Unable to change working directory to {workdir} ({exc})"
         logger.error(message)
         raise DaemonError(message)
+
 
 # end change_working_directory()
 
@@ -536,20 +555,21 @@ def change_process_owner(uid, gid, initgroups=False):
     try:
         username = pwd.getpwuid(uid).pw_name
     except KeyError:
-        logger.warning('Cannot find username for %s', uid)
+        logger.warning("Cannot find username for %s", uid)
         initgroups = False
 
     try:
-        logger.debug('Setting gid for %s to %s', username, gid)
+        logger.debug("Setting gid for %s to %s", username, gid)
         if initgroups:  # pragma: no cover
             os.initgroups(username, gid)
         else:
             os.setgid(gid)
         os.setuid(uid)
     except Exception as exc:
-        message = f'Unable to change process owner ({exc})'
+        message = f"Unable to change process owner ({exc})"
         logger.error(message)
         raise DaemonError(message)
+
 
 # end change_process_owner()
 
@@ -572,11 +592,12 @@ def prevent_core_dump():
     try:
         resource.getrlimit(core_resource)
     except ValueError:
-        logger.warning('System does not support RLIMIT_CORE resource limit')
+        logger.warning("System does not support RLIMIT_CORE resource limit")
         raise
 
     core_limit = (0, 0)
     resource.setrlimit(core_resource, core_limit)
+
 
 # end prevent_core_dump()
 
@@ -595,5 +616,6 @@ def is_started_by_init():
         return True
 
     return False
+
 
 # end is_init_process()
