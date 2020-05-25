@@ -117,8 +117,8 @@ def register(
     Args:
         stage (str): The stage to associate this task with.
         name (str): The name of this task. Uses the function name if not given.
-        params: (dict): The input mapping from where we need to get from the context.
-        return_value: (str): Location within the context to store the return value.
+        params: (dict): The input mapping to get values from context.
+        return_value: (str): Location within context to store the return value.
         workflow_cls (Workflow): The reference to the workflow class.
     """
 
@@ -142,7 +142,9 @@ def register(
             workflow_name = get_callable_parent(func)
             if workflow_name:
                 mod = inspect.getmodule(get_inner_func(func))
-                cache = getattr(mod, "_blueprint_cache", defaultdict(BluePrint))
+                cache = getattr(mod,
+                                "_blueprint_cache",
+                                defaultdict(BluePrint))
                 mod._blueprint_cache = cache
                 blueprint = cache[workflow_name]
             else:
@@ -153,8 +155,11 @@ def register(
             raise WorkflowError(f"Task {taskname} is already registered")
 
         # Creates the task and adds it into the blueprint
-        task = Task(func, params=params, return_value=return_value)
-        logger.info(f'{workflow_name} Adding task {task} into {blueprint}')
+        task = Task(func,
+                    name=taskname,
+                    params=params,
+                    return_value=return_value)
+        logger.info(f'({workflow_name}) Adding task {task} into {blueprint}')
         blueprint.add_task(stage=stage, taskname=taskname, task=task)
 
         @wraps(func)

@@ -3,12 +3,9 @@
 
 # Standard imports
 import logging
-import inspect
 
 # Application imports
 import daedalus.workflow.workflow as workflow
-import daedalus.workflow.blueprint as blueprint
-import daedalus.workflow.task as task
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +17,7 @@ class MyCustomWorkflow(workflow.Workflow):
 
     @workflow.register(stage='method')
     def task_method(self):
-        pass 
+        pass
 
     @workflow.register(stage='bound')
     def task_boundmethod(self):
