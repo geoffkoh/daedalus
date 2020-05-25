@@ -22,7 +22,7 @@ class SimpleWorkflow(Workflow):
     # end prepare()
 
     @register(stage='run', name='task_run')
-    def run(self, x: int, y: int):
+    def runtask(self, x: int, y: int):
         """ Runs a simple function """
         result = x + y
         return result

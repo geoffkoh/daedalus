@@ -9,7 +9,7 @@ import logging
 # Application imports
 from daedalus.workflow.workflow import Workflow
 from daedalus.samples.workflow.simple import (
-    SimpleWorkflow, 
+    SimpleWorkflow,
     ExtendedSimpleWorkflow
 )
 
@@ -34,8 +34,5 @@ def test_simple_workflow():
     logger.info(ExtendedSimpleWorkflow().blueprint)
 
     # Tests the running of the simple workflow
-    simple = SimpleWorkflow()
-    results = simple.run()
-    logger.info(results)
 
 # end test_simple_workflow()

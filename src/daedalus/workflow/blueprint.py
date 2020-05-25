@@ -50,10 +50,4 @@ class BluePrint:
 
     # end add_task()
 
-    def instantiate(self, workflow: "Workflow"):
-        """ Creates a binded copy of the blueprint """
-
-    # end instantiate()
-
-
 # end class BluePrint
