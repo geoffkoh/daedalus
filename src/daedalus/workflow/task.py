@@ -39,13 +39,13 @@ class Task:
     def __init__(self,
                  func: Callable,
                  name: str,
+                 parent: object = None,
                  params: dict = None,
                  return_value: str = None):
         """ Constructor """
 
-        self._parent = None
+        self._parent = parent
         self._func = func
-        self._func_type = get_callable_type(func)
         self._name = name
         self._params = params or {}
         self._return_value = return_value

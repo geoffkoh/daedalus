@@ -8,15 +8,15 @@ A workflow is a set of tasks that needs to be carried out.
 It controls the order in which the tasks are to be executed.
 
 Adopting from gitlab pipelines, tasks are laid
-out in a series of stages. Within each stage, the tasks can run in
+out in a linear series of stages. Within each stage, the tasks can run in
 any order, and all the tasks within a stage must be
 completed before any task of the next stage can be triggered
 off. Some of the tasks may be marked as skipped if certain
 pre-conditions are not satisfied. Some of them may
 also be marked as able to fail (for non-critical tasks)
 
-The tasks and stages are stored out in a ``Blueprint``.
-Each Workflow class has an instance of the Blueprint.
+The tasks and stages are stored out in a ``Blueprint`` and
+each Workflow class has an instance of the Blueprint.
 
 To define a workflow, we can do it in a few ways:
 
@@ -24,10 +24,7 @@ Approach 1: Define a self-contained Workflow
 ============================================
 
 In this approach, we extend from the ``Workflow`` class
-to create the custom workflow. To specify the
-tasks for the workflow, we then override the function
-``init_blueprint()`` and that is where one can specify
-the various tasks and stages.
+to create the custom workflow.
 
 Approach 2: Define an empty Workflow and using decorators
 =========================================================
@@ -86,6 +83,7 @@ from .util import (
     get_callable_parent,
     get_inner_func,
     is_ordered_sublist,
+    get_callable_type
 )
 
 logger = logging.getLogger(__name__)
@@ -126,7 +124,13 @@ def register(
         """ Inner decorator that takes in the function itself """
 
         taskname = name or get_callable_name(func)
-        logger.info("Registering %s (%s) in stage %s", func, taskname, stage)
+        logger.warning("Registering %s (%s) in stage %s",
+                       func,
+                       taskname,
+                       stage)
+        logger.info(f"Get_callable_parent: {get_callable_parent(func)} | "
+                    f"Get_callable_type: {get_callable_type(func)} | "
+                    f"Get_inner_func: {get_inner_func(func)}")
 
         if workflow_cls:
             if hasattr(workflow_cls, "blueprint") and isinstance(
@@ -139,7 +143,7 @@ def register(
                     f"Workflow class ({workflow_cls})"
                 )
         else:
-            workflow_name = get_callable_parent(func)
+            workflow_name, _ = get_callable_parent(func)
             if workflow_name:
                 mod = inspect.getmodule(get_inner_func(func))
                 cache = getattr(mod,
@@ -159,7 +163,7 @@ def register(
                     name=taskname,
                     params=params,
                     return_value=return_value)
-        logger.info(f'({workflow_name}) Adding task {task} into {blueprint}')
+        # logger.info(f'({workflow_name}) Adding task {task} into {blueprint}')
         blueprint.add_task(stage=stage, taskname=taskname, task=task)
 
         @wraps(func)
@@ -205,10 +209,12 @@ class WorkflowMeta(type):
         # Gets blueprint from module blueprint cache
         # or creates a new one
         mod = inspect.getmodule(workflow_class)
+        qualname = workflow_class.__qualname__
         blueprint = None
         if hasattr(mod, "_blueprint_cache"):
             cache = mod._blueprint_cache
-            blueprint = cache.get(name, None)
+            blueprint = cache.get(qualname, None)
+
         if blueprint is None:
             blueprint = BluePrint(stages=stages)
 
@@ -266,10 +272,6 @@ class Workflow(metaclass=WorkflowMeta):
         # workflow and can be accessible by all the Tasks.
         self._context = None
 
-        # Dictionary to hold the end result of each Task.
-        # The key is the name of the task.
-        self._result = dict()
-
         # Instantiate a copy of the stages and blueprint
         self.stages = copy.copy(self.stages)
         # self.blueprint = self.blueprint.instantiate(self, self._context)
@@ -282,5 +284,9 @@ class Workflow(metaclass=WorkflowMeta):
         pass
 
     # end create_from_settings()
+
+    def run(self):
+        """ Runs the workflow """
+    # end run()
 
 # end class Workflow
