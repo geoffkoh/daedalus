@@ -13,14 +13,10 @@ logger = logging.getLogger(__name__)
 class MyCustomWorkflow(workflow.Workflow):
     """ This is a custom workflow """
 
-    stages = ['method', 'bound', 'static', 'class']
+    stages = ['method', 'instance', 'static', 'class']
 
     @workflow.register(stage='method')
     def task_method(self):
-        pass
-
-    @workflow.register(stage='bound')
-    def task_boundmethod(self):
         pass
 
     @workflow.register(stage='static')
@@ -35,24 +31,55 @@ class MyCustomWorkflow(workflow.Workflow):
         logger.info('In task_classmethod()')
         pass
 
+    @staticmethod
+    def task_post_staticmethod():
+        logger.info('In task_post_staticmethod')
+        pass
+
+    @classmethod
+    def task_post_classmethod(cls):
+        logger.info('In task_post_classmethod')
+        pass
+
+    def task_post_method(self):
+        logger.info('In task_post_method')
+        pass
+
+    def task_post_boundmethod(self):
+        logger.info('In task_post_boundmethod')
+        pass
+
 # end class MyCustomWorkflow
 
 
-class TestWorkflow:
-    """ Test class for workflow """
+def test_register_tasks():
+    """ Testing of the various tasks """
 
-    def test_define_workflow(self):
-        """ Tests to define a new workflow """
+    # Case 1: Register a static function post class creation
+    workflow.register(stage='static')(MyCustomWorkflow.task_post_staticmethod)
 
-        logger.info(MyCustomWorkflow.blueprint)
+    # Case 2: Register a class function post class creation
+    workflow.register(stage='class')(MyCustomWorkflow.task_post_classmethod)
 
-    # end test_define_workflow()
+    # Case 3: Register a class method post class creation
+    workflow.register(stage='method')(MyCustomWorkflow.task_post_method)
 
-    def test_create(self):
-        """ Tests the creation of workflow """
+    # Case 4: Register a instance method
+    wf = MyCustomWorkflow()
+    workflow.register(stage='instance')(wf.task_post_boundmethod)
 
-        assert True
+# end test_define_workflow()
 
-    # end test_create()
 
-# end class TestWorkflow
+def test_inner_class():
+    """ Tests the creation of workflow """
+
+    class InnerClass2(workflow.Workflow):
+
+        @workflow.register(stage='add')
+        def add(self, x: int, y: int):
+            return x + y
+
+    logger.info(InnerClass2.blueprint)
+
+# end test_create()

@@ -69,14 +69,13 @@ def get_callable_type(obj: Callable):
 
     # For functions declared within a class
     name = obj.__name__
-    parent_name = get_callable_parent(obj)
-    parent = obj.__globals__.get(parent_name, None)
+    parent_name, parent = get_callable_parent(obj)
     if parent and hasattr(parent, name):
 
         # Set the base type
         type_name = "method"
 
-        # Checsk if it is staticmethod/classmethod
+        # Checks if it is staticmethod/classmethod
         obj_type = parent.__dict__.get(name)
         if type(obj_type).__name__ in ["staticmethod", "classmethod"]:
             return type(obj_type).__name__
@@ -94,13 +93,22 @@ def get_callable_type(obj: Callable):
 
 
 def get_callable_parent(obj: Callable):
-    """ Gets the name of the immediate parent """
+    """ Gets the name and reference of the parent.
+
+    Args:
+        obj (Callable): Returns the name and reference
+            to the parent type.
+
+    Returns:
+        A typle (str, object) of the name and parent.
+    """
 
     func = obj.__func__ if hasattr(obj, "__func__") else obj
     ancestor_list = func.__qualname__.split(".")[:-1]
-    if ancestor_list and ancestor_list[-1] != "<locals>":
-        return ancestor_list[-1]
-    return None
+
+    name = ".".join(ancestor_list) if ancestor_list else None
+    parent = func.__globals__.get(name, None)
+    return (name, parent)
 
 
 # end get_callable_parentname()

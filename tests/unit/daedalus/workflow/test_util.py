@@ -98,10 +98,13 @@ def test_get_callable_parent():
     """ Tests the function get_callable_parent """
 
     # Calling parents from various functions
-    assert get_callable_parent(InnerClass.my_static_method) == 'InnerClass'
-    assert get_callable_parent(InnerClass.my_class_method) == 'InnerClass'
-    assert get_callable_parent(InnerClass.my_normal_method) == 'InnerClass'
-    assert get_callable_parent(function1) is None
+    assert get_callable_parent(InnerClass.my_static_method)\
+        == ('InnerClass', InnerClass)
+    assert get_callable_parent(InnerClass.my_class_method)\
+        == ('InnerClass', InnerClass)
+    assert get_callable_parent(InnerClass.my_normal_method)\
+        == ('InnerClass', InnerClass)
+    assert get_callable_parent(function1) == (None, None)
 
 # end test_get_callable_parent()
 
