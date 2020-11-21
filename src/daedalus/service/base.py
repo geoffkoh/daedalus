@@ -4,9 +4,11 @@
 """ Base Class for a Service """
 
 # Standard imports
+import inspect
 import logging
 from enum import Enum
 from functools import wraps
+import pprint
 import os
 import signal
 import sys
@@ -15,10 +17,18 @@ import threading
 from typing import Dict, Callable
 
 # Third party imports
-import attr
 from apscheduler.schedulers.background import BackgroundScheduler
+import attr
 from flask import Flask, jsonify, request
 from waitress import serve
+
+# Application imports
+from ..workflow.util import get_callable_parent
+from ..utility.meta import (
+    get_callable_name,
+    get_callable_parent,
+    get_inner_func
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +60,73 @@ class State(Enum):
     STOPPED = 7
 
 
-def add_job():
-    """ Wrapper function to add job to the class registry """
-# end add_event()
+def add_job(name: str = None):
+    """ Wrapper function to add job to the class job registry.
+    
+    If this decorator is used in the class, the class
+    object have yet been created. Thus it is stored in
+    a cache object that is specific to the module. 
+   
+    """
+
+    def _inner_decorator(func):
+        """ Inner decorator that takes in the function. """
+
+        # Registers the job into a cache that is associated with
+        # the module
+        job_name = name or get_callable_name(func)
+        parent_name, _ = get_callable_parent(func)
+        if parent_name:
+            mod = inspect.getmodule(get_inner_func(func))
+            service_cache = getattr(
+                mod,
+                "_service_cache",
+                dict()
+            )
+            mod._service_cache = service_cache            
+        else:
+            raise Exception(f"Fail to register job: {func}")
+        if parent_name not in service_cache:
+            service_cache[parent_name] = {
+                'jobs': {},
+                'handlers': {}
+            }
+        service_cache[parent_name]['jobs'][name] = func
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            """ Calls the function as per normal """
+            return func(*args, **kwargs)
+        return wrapped
+
+    return _inner_decorator
+
+# end add_job()
 
 def add_handler():
     """ Wrapper function to add listening end point """
 # end add_handler()
 
 
-class Service:
+class ServiceMeta(type):
+    """ Meta class for service """
+
+    def __new__(cls, name, bases, attr):
+        """ Constructor """
+
+        service_class = type.__new__(cls, name, bases, attr)
+
+        # Gets the cache from the module
+        mod = inspect.getmodule(service_class)
+        qualname = service_class.__qualname__
+
+        return service_class
+
+    # end __new__()
+
+# end class ServiceMeta
+
+class Service(metaclass=ServiceMeta):
     """ Base class of a Service """
     
     _job_registry: Dict[str, Callable] = {}
