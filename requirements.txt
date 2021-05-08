@@ -17,7 +17,7 @@
 setuptools==38.2.4
 argcomplete==1.9.4
 colorama==0.4.1
-eventlet==0.24.1
+eventlet==0.31.0
 funcsigs==1.0.2
 gevent==1.4.0
 greenlet==0.4.15
