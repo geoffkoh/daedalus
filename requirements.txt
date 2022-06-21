@@ -21,7 +21,7 @@ eventlet==0.24.1
 funcsigs==1.0.2
 gevent==1.4.0
 greenlet==0.4.15
-numpy==1.16.1
+numpy==1.22.0
 pathlib2==2.3.3
 pudb==2018.1
 Sphinx==1.8.4
